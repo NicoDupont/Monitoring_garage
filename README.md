@@ -1,6 +1,6 @@
 # Monitorer mon Garage avec Esphome et HomeAssitant
 
-Monitoring du garage + relais contact sec automatisme portail et lumiere portail.  
+Monitoring du garage + gestion des relais contact sec pour automatisme portail et lumiere portail.  
 
 ### Electronique :
 
