@@ -10,6 +10,7 @@ Liste des composants :
 - 1x résistance 10k ohm
 - 1x résistance 4.7k ohm
 - 1x capteur magnétique fermeture/ouverture de porte/fenetre
+- 1x fusible 0.5a + porte fusible
 - 1x capteur DHT22
 - 1x PIR Sensor AM312
 - 1x sensor de luminosité GY-2561 TSL2561
@@ -22,21 +23,15 @@ Liste des composants :
 
 ##### Schéma electronique :
 
-![ShémaFritzing]()
+![ShémaFritzing](https://github.com/NicoDupont/Monitoring_garage/blob/main/img/esp_garage_frtitzing_v2.png?raw=true)
 
 ##### Réalisation :
 
-![ShémaFritzing]()
-
-### Home Assistant :
-
-#### Yaml pour esphome : 
-
-    .yaml
+![electronique](https://github.com/NicoDupont/Monitoring_garage/blob/main/img/IMG_1292.jpg?raw=true)
 
 #### Sensor sur HA : 
 
-![sensorha]()
+![sensorha](https://github.com/NicoDupont/Monitoring_garage/blob/main/img/entite.png?raw=true)
 
 
 

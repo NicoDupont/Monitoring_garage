@@ -1,0 +1,246 @@
+substitutions:
+  friendly_name: "Esp Garage"
+  friendly_name_wifiap: "Esp-Garage-Hotspot"
+  interval_update_court: "60s"
+  interval_update_normal: "700s"
+  interval_update_long: "1400s"
+
+esphome:
+  name: esp-garage
+  comment: esp32 30pin monitoring garage + contacts portail
+ 
+  on_boot:
+    priority: 600
+    then:
+      - switch.turn_off: EspGarageContactSecPortail
+      - switch.turn_off: EspGarageContactLumierePortail
+
+esp32:
+  board: esp32dev
+
+# Enable logging
+logger:
+  #baud_rate: 0   # disable logging via UART, help to avoid numerous crash with ESP_LOGD
+  #level: INFO   # INFO for less log, put DEBUG to view all the linky's "étiquettes" received  in the logs
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: "96329e282a1ebf65083cb3f714217eca"
+
+wifi:
+  networks:
+  - ssid: !secret wifi_maison_ssid
+    password: !secret wifi_maison_password
+  - ssid: !secret wifi_maison_2_ssid
+    password: !secret wifi_maison_2_password
+  reboot_timeout : 2min #reboot si pas de wifi actif
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${friendly_name_wifiap}"
+    password: !secret wifi_esp_ap_password
+
+captive_portal:
+
+#--------------------------------------
+web_server:
+  port: 80
+  version: 2
+
+#--------------------------------------
+esp32_ble_tracker:
+bluetooth_proxy:
+
+#--------------------------------------
+#i2c pour lux sensor (tsl2561)
+i2c:
+  sda: 21
+  scl: 22
+  scan: true
+  id: bus_a
+
+time:
+  - platform: homeassistant
+    timezone: "Europe/Paris"
+    id: ha_time
+
+#--------------------------------------
+#--------------------------------------
+binary_sensor:
+
+# diagnostics
+  - platform: status
+    name: "${friendly_name} Status"
+    id: EspGarageStatus
+  
+# pir sensor AM312
+  - platform: gpio
+    name: "${friendly_name} PIR Sensor"
+    id: EspGaragePIRSensor
+    device_class: motion
+    pin: 
+      number: 18
+      mode:
+        input: true
+        pulldown: true
+    filters:
+      - delayed_off: 15s  #2s is hardware default -- too frequent for my tastes
+
+#door sensor 
+  - platform: gpio
+    pin:
+      number: 5
+      inverted: true
+    name: "${friendly_name} Grande Porte"
+    id: EspGarageGrandePorte
+    device_class: door
+
+#--------------------------------------
+#--------------------------------------
+# diagnostics
+  
+text_sensor:
+  - platform: template
+    name: "${friendly_name} Uptime"
+    id: uptime_human
+    icon: mdi:clock-start
+    
+  - platform: wifi_info
+    ip_address:
+      name: "${friendly_name} Local IP"
+      id: EspGarageLocalIP
+    ssid:
+      name: "${friendly_name} SSID"
+      id: EspGarageSSID
+
+#--------------------------------------
+#--------------------------------------
+#bouton
+button:
+  - platform: restart
+    name: "${friendly_name} Restart"
+    id: EspGarageRestart
+  - platform: shutdown
+    name: "${friendly_name} Shutdown"
+    id: EspGarageShutdown
+  - platform: safe_mode
+    name: "${friendly_name} Safe Mode"
+    id: EspGarageSafeMode
+
+# bouton contact sec du portail
+  - platform: template
+    name: "${friendly_name} Button Contact Sec Portail"
+    id: EspGarageButtonContactSecPortail
+    icon: mdi:gate-open
+    on_press:
+      then:
+        - switch.turn_off: EspGarageContactSecPortail
+        - switch.turn_on: EspGarageContactSecPortail
+        - delay: 0.1s
+        - switch.turn_off: EspGarageContactSecPortail
+
+# bouton contact lumiere du portail
+  - platform: template
+    name: "${friendly_name} Button Contact Lumiere Portail"
+    id: EspGarageButtonContactLumierePortail
+    icon: mdi:post-lamp
+    on_press:
+      then:
+        - switch.turn_off: EspGarageContactLumierePortail
+        - switch.turn_on: EspGarageContactLumierePortail
+        - delay: 0.1s
+        - switch.turn_off: EspGarageContactLumierePortail
+
+
+#--------------------------------------
+#--------------------------------------
+sensor:
+
+#--------------------------------------
+#esp32 temp
+  - platform: internal_temperature
+    name: "${friendly_name} Internal Esp32 Temp"
+    id: EspGarageInternalEsp32Temp
+    update_interval: ${interval_update_normal}
+
+#--------------------------------------
+#wifi
+  - platform: wifi_signal
+    name: "${friendly_name} WiFi Signal"
+    id: EspGarageWiFiSignal
+    update_interval: ${interval_update_normal}
+
+#--------------------------------------
+# lux 
+  - platform: tsl2561
+    name: "${friendly_name} Lux"
+    id : EspGarageLux
+    address: 0x39
+    i2c_id: bus_a
+    update_interval: ${interval_update_court}
+
+#--------------------------------------
+#Température garage
+
+  - platform: dht
+    pin: 19
+    temperature:
+      name: "${friendly_name} Temperature"
+      id : EspGarageTemperature
+      filters:
+        - offset: 0
+    humidity:
+      name: "${friendly_name} Humidity"
+      id : EspGarageHumidity
+      filters:
+        - offset: 0
+    update_interval: ${interval_update_normal}
+
+#--------------------------------------
+#Uptime decomposé    
+  - platform: uptime
+    name: "${friendly_name} Uptime Sensor"
+    id: EspGarageUptimeSensor
+    update_interval: ${interval_update_long}
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: uptime_human
+            state: !lambda |-
+              int seconds = round(id(EspGarageUptimeSensor).raw_state);
+              int days = seconds / (24 * 3600);
+              seconds = seconds % (24 * 3600);
+              int hours = seconds / 3600;
+              seconds = seconds % 3600;
+              int minutes = seconds /  60;
+              return (
+                (days ? to_string(days) + "d " : "") +
+                (hours ? to_string(hours) + "h " : "") +
+                (minutes ? to_string(minutes) + "m " : "")
+              ).c_str();
+              
+
+switch:
+
+#gestion du relais contact sec du portail
+  - platform: gpio
+    pin:
+      number: 27
+      inverted: true
+    name: "${friendly_name} Contact Sec Portail"
+    id: EspGarageContactSecPortail
+    restore_mode: "ALWAYS_OFF"
+
+#gestion du relais contact lumiere du portail
+  - platform: gpio
+    pin:
+      number: 26
+      inverted: true
+    name: "${friendly_name} Contact Lumiere Portail"
+    id: EspGarageContactLumierePortail
+    restore_mode: "ALWAYS_OFF"
+
+
+    
