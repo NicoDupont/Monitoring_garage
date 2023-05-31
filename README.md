@@ -23,6 +23,9 @@ Liste des composants :
 
 ##### Schéma electronique :
 
+Les gpio du diagramme ne sont pas les bons.  
+Voir le yaml  
+
 ![ShémaFritzing](https://github.com/NicoDupont/Monitoring_garage/blob/main/img/esp_garage_frtitzing_v2.png?raw=true)
 
 ##### Réalisation :
